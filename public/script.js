@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const contentDisplay = document.getElementById('content-display');
     const originalUrlElement = document.getElementById('original-url');
     const pageTitleElement = document.getElementById('page-title');
+    const replacementCountElement = document.getElementById('replacement-count');
 
     urlForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -42,6 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
             originalUrlElement.textContent = url;
             originalUrlElement.href = url;
             pageTitleElement.textContent = data.title || 'No title';
+            replacementCountElement.textContent = data.replacementCount || '0';
+            
+            // Add animation effect for the counter
+            replacementCountElement.classList.add('counter-updated');
+            setTimeout(() => {
+                replacementCountElement.classList.remove('counter-updated');
+            }, 1000);
             
             // Create a sandboxed iframe to display the content
             const iframe = document.createElement('iframe');

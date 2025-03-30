@@ -127,3 +127,19 @@ footer {
     color: #666;
     font-size: 0.875rem;
 }
+
+.highlight {
+    color: #2196F3;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+@keyframes counterUpdate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.counter-updated {
+    animation: counterUpdate 0.5s ease-in-out;
+}

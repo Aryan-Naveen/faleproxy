@@ -48,6 +48,7 @@ app.post('/fetch', async (req, res) => {
     }
     
     // Process text nodes in the body
+    let replacementCount = 0;
     $('body *').contents().filter(function() {
       return this.nodeType === 3; // Text nodes only
     }).each(function() {
@@ -55,19 +56,25 @@ app.post('/fetch', async (req, res) => {
       const text = $(this).text();
       const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
       if (text !== newText) {
+        replacementCount += (text.match(/yale/gi) || []).length;
         $(this).replaceWith(newText);
       }
     });
     
     // Process title separately
-    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
-    $('title').text(title);
+    const title = $('title').text();
+    const newTitle = title.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
+    if (title !== newTitle) {
+      replacementCount += (title.match(/yale/gi) || []).length;
+      $('title').text(newTitle);
+    }
     
     return res.json({ 
       success: true, 
       content: $.html(),
-      title: title,
-      originalUrl: url
+      title: newTitle,
+      originalUrl: url,
+      replacementCount: replacementCount
     });
   } catch (error) {
     console.error('Error fetching URL:', error.message);
