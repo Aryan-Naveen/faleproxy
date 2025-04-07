@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      tests_passed: ${{ steps.test_status.outputs.status }}
 
     strategy:
       matrix:
@@ -27,9 +29,23 @@ jobs:
       run: npm ci
       
     - name: Run tests
+      id: test_run
       run: npm run test:ci
+      continue-on-error: true
       
+    - name: Set test status
+      id: test_status
+      if: always()
+      run: |
+        if [ "${{ steps.test_run.outcome }}" == "success" ]; then
+          echo "status=true" >> $GITHUB_OUTPUT
+        else
+          echo "status=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
     - name: Upload coverage report
+      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: coverage-report
@@ -37,7 +53,9 @@ jobs:
         
   deploy:
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      needs.test.outputs.tests_passed == 'true'
     runs-on: ubuntu-latest
     
     steps:

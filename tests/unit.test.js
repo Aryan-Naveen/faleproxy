@@ -1,26 +1,67 @@
 const cheerio = require('cheerio');
 const { sampleHtmlWithYale } = require('./test-utils');
 
+// Helper function to replace Yale with Fale
+function replaceYaleWithFale(text) {
+  return text.replace(/Yale/g, 'Fale')
+             .replace(/YALE/g, 'FALE')
+             .replace(/yale/g, 'fale');
+}
+
+// Helper function to normalize HTML for comparison
+function normalizeHtml(html) {
+  return html.replace(/\s+/g, ' ').trim();
+}
+
+// Helper function to process text nodes
+function processTextNodes($) {
+  // Process text nodes
+  $('*').each(function() {
+    // Skip script tags
+    if ($(this).is('script')) {
+      return;
+    }
+
+    // Handle text nodes
+    $(this).contents().filter(function() {
+      return this.type === 'text';
+    }).each(function() {
+      const text = this.data;
+      const newText = replaceYaleWithFale(text);
+      if (text !== newText) {
+        this.data = newText;
+      }
+    });
+
+    // Handle elements that only contain text (no children)
+    if ($(this).children().length === 0) {
+      const text = $(this).text();
+      const newText = replaceYaleWithFale(text);
+      if (text !== newText) {
+        $(this).text(newText);
+      }
+    }
+  });
+
+  // Process text nodes in the root level
+  $.root().contents().filter(function() {
+    return this.type === 'text';
+  }).each(function() {
+    const text = this.data;
+    const newText = replaceYaleWithFale(text);
+    if (text !== newText) {
+      this.data = newText;
+    }
+  });
+}
+
 describe('Yale to Fale replacement logic', () => {
   
   test('should replace Yale with Fale in text content', () => {
     const $ = cheerio.load(sampleHtmlWithYale);
     
-    // Process text nodes in the body
-    $('body *').contents().filter(function() {
-      return this.nodeType === 3; // Text nodes only
-    }).each(function() {
-      // Replace text content but not in URLs or attributes
-      const text = $(this).text();
-      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
-      if (text !== newText) {
-        $(this).replaceWith(newText);
-      }
-    });
-    
-    // Process title separately
-    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
-    $('title').text(title);
+    // Process all text nodes
+    processTextNodes($);
     
     const modifiedHtml = $.html();
     
@@ -60,48 +101,31 @@ describe('Yale to Fale replacement logic', () => {
         <p>This is a test page with no Yale references.</p>
       </body>
       </html>
-    `;
+    `.trim();
     
     const $ = cheerio.load(htmlWithoutYale);
+    const originalText = $('p').text().trim();
     
-    // Apply the same replacement logic
-    $('body *').contents().filter(function() {
-      return this.nodeType === 3;
-    }).each(function() {
-      const text = $(this).text();
-      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
-      if (text !== newText) {
-        $(this).replaceWith(newText);
-      }
-    });
+    // Process all text nodes
+    processTextNodes($);
     
-    const modifiedHtml = $.html();
-    
-    // Content should remain the same
-    expect(modifiedHtml).toContain('<title>Test Page</title>');
-    expect(modifiedHtml).toContain('<h1>Hello World</h1>');
-    expect(modifiedHtml).toContain('<p>This is a test page with no Yale references.</p>');
+    const $modified = cheerio.load($.html());
+    expect($modified('title').text()).toBe('Test Page');
+    expect($modified('h1').text()).toBe('Hello World');
+    expect($modified('p').text().trim()).toBe(originalText);
   });
 
   test('should handle case-insensitive replacements', () => {
     const mixedCaseHtml = `
       <p>YALE University, Yale College, and yale medical school are all part of the same institution.</p>
-    `;
+    `.trim();
     
     const $ = cheerio.load(mixedCaseHtml);
     
-    $('body *').contents().filter(function() {
-      return this.nodeType === 3;
-    }).each(function() {
-      const text = $(this).text();
-      const newText = text.replace(/Yale/gi, 'Fale');
-      if (text !== newText) {
-        $(this).replaceWith(newText);
-      }
-    });
+    // Process all text nodes
+    processTextNodes($);
     
-    const modifiedHtml = $.html();
-    
-    expect(modifiedHtml).toContain('FALE University, Fale College, and fale medical school');
+    const $modified = cheerio.load($.html());
+    expect($modified('p').text().trim()).toBe('FALE University, Fale College, and fale medical school are all part of the same institution.');
   });
 });
